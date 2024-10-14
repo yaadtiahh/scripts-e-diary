@@ -1,5 +1,6 @@
 from datacenter.models import Schoolkid, Mark, Chastisement, Lesson, Commendation
 import random
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 
 COMMENDATIONS = [
@@ -39,39 +40,40 @@ def get_child():
     try:
         child = Schoolkid.objects.get(full_name__contains=name)
         return child
-    except:
+    except Schoolkid.ObjectDoesNotExist:
         print("Учетной записи по такому имени не найдено!")
+    except Schoolkid.MultipleObjectsReturned:
+        print("Запрос вернул несколько объектов, хотя ожидался только один.")
 
 
 def fix_marks(child):
-    bad_child_marks = Mark.objects.filter(schoolkid=child[0], points__lt=4)
-    for bad_mark in bad_child_marks:
-        bad_mark.points = random.randint(4, 5)
-        bad_mark.save()
+    bad_child_marks = Mark.objects.filter(
+        schoolkid=child,
+        points__lt=4
+    ).update(points=random.randint(4, 5))
 
 
 def remove_chastisements(child):
-    remarks = Chastisement.objects.filter(schoolkid=child[0])
+    remarks = Chastisement.objects.filter(schoolkid=child)
     remarks.delete()
 
 
 def create_commendation(child, subject):
     group_letter = child.group_letter
     year_of_study = child.year_of_study
-    child_lessons = Lesson.objects.filter(
+    child_lesson = Lesson.objects.filter(
         group_letter=group_letter,
         year_of_study=year_of_study,
         subject__title=subject
-    )
+    ).order_by('date').last()
 
-    random_lesson = random.choice(child_lessons)
-    teacher = random_lesson.teacher
-    date = random_lesson.date
+    teacher = child_lesson.teacher
+    date = child_lesson.date
 
     commendation_child = Commendation.objects.create(
         text=random.choice(COMMENDATIONS),
         schoolkid=child,
-        subject=random_lesson.subject,
+        subject=child_lesson.subject,
         teacher=teacher,
         created=date
     )
