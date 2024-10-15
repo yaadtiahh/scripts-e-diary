@@ -65,9 +65,9 @@ def create_commendation(child, subject):
         year_of_study=year_of_study,
         subject__title=subject
     ).order_by('date').last()
-
-    teacher = child_lesson.teacher
-    date = child_lesson.date
+    if child_lesson is not None:
+        teacher = child_lesson.teacher
+        date = child_lesson.date
 
     commendation_child = Commendation.objects.create(
         text=random.choice(COMMENDATIONS),
